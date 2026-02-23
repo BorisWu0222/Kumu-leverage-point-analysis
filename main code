@@ -1,0 +1,47 @@
+import json
+import csv
+from collections import defaultdict
+
+# ── 載入資料 ────────────────────────────────────────────────
+# 請把檔名改成你的 JSON 檔案名稱
+with open(r"C:\Users\Boris Wu\Desktop\kumu-boriswu-boriss-intern-mapping-如何解決職涯機構活動參與率低落的問題？-promotion-purpose.json", encoding="utf-8") as f:
+    data = json.load(f)
+
+elements    = data["elements"]
+connections = data["connections"]
+
+# ── 建立 id → label 對照表 ──────────────────────────────────
+id_to_label = {e["_id"]: e["attributes"].get("label", e["_id"]) for e in elements}
+
+# ── 計算度數 ────────────────────────────────────────────────
+out_degree   = defaultdict(int)
+in_degree    = defaultdict(int)
+total_degree = defaultdict(int)
+
+for conn in connections:
+    src = conn["from"]
+    tgt = conn["to"]
+    out_degree[src]   += 1
+    in_degree[tgt]    += 1
+    total_degree[src] += 1
+    total_degree[tgt] += 1
+
+# ── 整理資料 ────────────────────────────────────────────────
+rows = []
+for e in elements:
+    eid = e["_id"]
+    rows.append({
+        "節點名稱": id_to_label[eid],
+        "連出":    out_degree[eid],
+        "連入":    in_degree[eid],
+        "總連結數": total_degree[eid],
+    })
+
+# ── 匯出 CSV（依總連結數排序）──────────────────────────────
+output_path = r"C:\Users\Boris Wu\Desktop\kumu_degree.csv"
+with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
+    writer = csv.DictWriter(f, fieldnames=["節點名稱", "連出", "連入", "總連結數"])
+    writer.writeheader()
+    writer.writerows(sorted(rows, key=lambda r: r["總連結數"], reverse=True))
+
+print(f"✅ 已匯出：{output_path}")
